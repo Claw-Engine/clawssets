@@ -5,15 +5,17 @@ public class AssetBuilder
 	public const string AssetExtension = ".ca", ResultDirectory = ".build", CacheName = ".cache";
 	public string WorkingDirectory { get; private set; }
 	public string TargetDirectory { get; private set; }
+	public string OutputsPath { get; private set; }
 	private List<FileData> oldFileData, newFileData;
-	private string CachePath;
+	private string cachePath;
 	private readonly BaseBuilder[] builders;
 
 	public AssetBuilder(string workingDirectory)
 	{
 		WorkingDirectory = workingDirectory;
 		TargetDirectory = Path.Combine(WorkingDirectory, ResultDirectory);
-		CachePath = Path.Combine(TargetDirectory, CacheName);
+		cachePath = Path.Combine(TargetDirectory, CacheName);
+		OutputsPath = Path.Combine(WorkingDirectory, "outputs");
 		builders = new BaseBuilder[]
 		{
 			new RawBuilder(),
@@ -57,7 +59,10 @@ public class AssetBuilder
 
 		string[] files = Directory.GetFiles(path), directories = Directory.GetDirectories(path);
 
-		for (int i = 0; i < files.Length; i++) newFileData.Add(new(files[i], WorkingDirectory));
+		for (int i = 0; i < files.Length; i++)
+		{
+			if (files[i] != OutputsPath) newFileData.Add(new(files[i], WorkingDirectory));
+		}
 
 		for (int i = 0; i < directories.Length; i++)
 		{
@@ -68,11 +73,11 @@ public class AssetBuilder
 	{
 		oldFileData = new();
 
-		if (!File.Exists(CachePath)) return;
+		if (!File.Exists(cachePath)) return;
 
 		Console.WriteLine("Lendo cache...");
 
-		StreamReader stream = new(CachePath);
+		StreamReader stream = new(cachePath);
 		BinaryReader reader = new(stream.BaseStream);
 		int count = reader.ReadInt32();
 
@@ -84,7 +89,7 @@ public class AssetBuilder
 	{
 		Console.WriteLine("Salvando cache...");
 
-		StreamWriter stream = new(CachePath);
+		StreamWriter stream = new(cachePath);
 		BinaryWriter writer = new(stream.BaseStream);
 
 		writer.Write(newFileData.Count);
@@ -130,11 +135,11 @@ public class AssetBuilder
 			if (Directory.Exists(directories[i])) Directory.Delete(directories[i], true);
 
 			Directory.CreateDirectory(directories[i]);
-			Console.WriteLine("Copiando arquivos de \"{0}\"...", directories[i]);
-			CopyTo(directories[i]);
+			Console.WriteLine("Copiando arquivos para \"{0}\"...", directories[i]);
+			CopyTo(TargetDirectory, directories[i]);
 		}
 	}
-	private void CopyTo(string path)
+	private void CopyTo(string path, string target)
 	{
 		string[] files = Directory.GetFiles(path), directories = Directory.GetDirectories(path);
 		string helper;
@@ -145,17 +150,17 @@ public class AssetBuilder
 
 			if (helper == CacheName) continue;
 
-			helper = Path.Combine(path, helper);
+			helper = Path.Combine(target, helper);
 
 			File.Copy(files[i], helper);
 		}
 
 		for (int i = 0; i < directories.Length; i++)
 		{
-			helper = Path.Combine(path, Path.GetFileName(directories[i]));
+			helper = Path.Combine(target, Path.GetFileName(directories[i]));
 
 			Directory.CreateDirectory(helper);
-			CopyTo(helper);
+			CopyTo(directories[i], helper);
 		}
 	}
 }
