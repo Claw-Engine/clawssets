@@ -22,7 +22,4 @@ public class FileData
 		SubDirectory = Directory.GetParent(path).FullName.Replace(workingDirectory, string.Empty);
 		LastModified = lastModified;
 	}
-
-	public static bool operator ==(FileData a, FileData b) => a.FullPath == b.FullPath && a.LastModified == b.LastModified;
-	public static bool operator !=(FileData a, FileData b) => a.FullPath != b.FullPath || a.LastModified != b.LastModified;
 }

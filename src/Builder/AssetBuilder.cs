@@ -31,9 +31,9 @@ public class AssetBuilder
 		{
 			for (int j = 0; j < newFileData.Count; j++)
 			{
-				if (oldFileData[i] == newFileData[j])
+				if (oldFileData[i].FullPath == newFileData[j].FullPath)
 				{
-					newFileData[j].NeedUpdate = false;
+					if (oldFileData[i].LastModified == newFileData[j].LastModified) newFileData[j].NeedUpdate = false;
 					
 					oldFileData.RemoveAt(i);
 
