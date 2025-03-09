@@ -16,7 +16,8 @@ public class AssetBuilder
 		CachePath = Path.Combine(TargetDirectory, CacheName);
 		builders = new BaseBuilder[]
 		{
-			new RawBuilder()
+			new RawBuilder(),
+			new AudioBuilder()
 		};
 	}
 

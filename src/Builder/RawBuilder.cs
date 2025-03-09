@@ -1,6 +1,6 @@
 namespace Clawssets.Builder;
 
-public class RawBuilder : BaseBuilder
+public sealed class RawBuilder : BaseBuilder
 {
 	protected override bool IsValid(FileData file)
 	{
@@ -21,11 +21,9 @@ public class RawBuilder : BaseBuilder
 
 			for (int i = 0; i < group.Value.Count; i++)
 			{
-				outputPath = Path.Combine(outputPath, Path.GetFileName(group.Value[i].FullPath));
+				group.Value[i].OutputPath = Path.Combine(outputPath, Path.GetFileName(group.Value[i].FullPath));
 
-				File.Copy(group.Value[i].FullPath, outputPath);
-
-				group.Value[i].OutputPath = outputPath;
+				File.Copy(group.Value[i].FullPath, group.Value[i].OutputPath);
 			}
 		}
 	}
