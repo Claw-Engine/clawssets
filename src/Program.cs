@@ -20,7 +20,7 @@ class Program
 			if (!readingOutput)
 			{
 				if (args[i] == "-o" || args[i] == "--output") readingOutput = true;
-				else if (Directory.Exists(args[i])) workingDir = args[i];
+				else if (Directory.Exists(args[i])) workingDir = Path.GetFullPath(args[i]);
 				else Console.WriteLine("ERRO: \"{0}\" não é um diretório válido!", args[i]);
 			}
 			else if (Directory.Exists(args[i])) outputDirs.Add(args[i]);
