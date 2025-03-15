@@ -20,7 +20,8 @@ public class AssetBuilder
 		{
 			new RawBuilder(),
 			new AudioBuilder(),
-			new TextureBuilder()
+			new TextureBuilder(),
+			new FontBuilder()
 		};
 	}
 
