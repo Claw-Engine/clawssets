@@ -118,9 +118,26 @@ public class AssetBuilder
 		{
 			Console.WriteLine("Apagando arquivos antigos...");
 
+			bool canDelete;
+
 			for (int i = 0; i < oldFileData.Count; i++)
 			{
-				if (oldFileData[i].OutputPath.Length > 0) File.Delete(oldFileData[i].OutputPath);// Corrigir isso no caso de ATLAS!!!
+				if (oldFileData[i].OutputPath.Length > 0)
+				{
+					canDelete = true;
+
+					for (int j = 0; j < newFileData.Count; j++)
+					{
+						if (newFileData[j].OutputPath == oldFileData[i].OutputPath)
+						{
+							canDelete = false;
+
+							break;
+						}
+					}
+
+					if (canDelete) File.Delete(oldFileData[i].OutputPath);
+				}
 			}
 		}
 
