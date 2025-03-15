@@ -6,7 +6,7 @@ namespace Clawssets.Builder;
 
 public sealed class TextureBuilder : BaseBuilder
 {
-	private const int AtlasWidth = 2000, AtlasHeight = 2000, TextureGap = 1;
+	public const int AtlasSize = 2000, TextureGap = 1;
 	private const string AtlasName = "atlas" + AssetBuilder.AssetExtension;
 
 	protected override bool IsValid(FileData file)
@@ -71,7 +71,7 @@ public sealed class TextureBuilder : BaseBuilder
 	{
 		Console.WriteLine("Compilando ${0}...", output);
 
-		Image<Rgba32> atlas = new(AtlasWidth, AtlasHeight);
+		Image<Rgba32> atlas = new(AtlasSize, AtlasSize);
 		Point location = new(TextureGap);
 		Size size = new();
 		int addToY = 0;
@@ -82,16 +82,16 @@ public sealed class TextureBuilder : BaseBuilder
 
 		for (int i = 0; i < textures.Count; i++)
 		{
-			if (location.X + textures[i].image.Width + TextureGap > AtlasWidth)
+			if (location.X + textures[i].image.Width + TextureGap > AtlasSize)
 			{
 				location.X = TextureGap;
 				location.Y += addToY + TextureGap;
 				addToY = 0;
 			}
 
-			if (location.Y + textures[i].image.Height + TextureGap > AtlasHeight)
+			if (location.Y + textures[i].image.Height + TextureGap > AtlasSize)
 			{
-				Console.WriteLine("ERRO: O Texture Atlas ultrapassou a barreira de {0}x{1}!", AtlasWidth, AtlasHeight);
+				Console.WriteLine("ERRO: O Texture Atlas ultrapassou a barreira de {0}x{1}!", AtlasSize, AtlasSize);
 
 				return;
 			}
@@ -119,7 +119,7 @@ public sealed class TextureBuilder : BaseBuilder
 
 		stream.Close();
 	}
-	private unsafe void WriteImage(BinaryWriter writer, Image<Rgba32> image, Size size)
+	public static unsafe void WriteImage(BinaryWriter writer, Image<Rgba32> image, Size size)
 	{
 		writer.Write(size.Width);
 		writer.Write(size.Height);
