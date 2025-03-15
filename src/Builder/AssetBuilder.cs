@@ -19,7 +19,8 @@ public class AssetBuilder
 		builders = new BaseBuilder[]
 		{
 			new RawBuilder(),
-			new AudioBuilder()
+			new AudioBuilder(),
+			new TextureBuilder()
 		};
 	}
 
@@ -119,7 +120,7 @@ public class AssetBuilder
 
 			for (int i = 0; i < oldFileData.Count; i++)
 			{
-				if (oldFileData[i].OutputPath.Length > 0) File.Delete(oldFileData[i].OutputPath);
+				if (oldFileData[i].OutputPath.Length > 0) File.Delete(oldFileData[i].OutputPath);// Corrigir isso no caso de ATLAS!!!
 			}
 		}
 

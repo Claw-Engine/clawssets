@@ -1,0 +1,149 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+
+namespace Clawssets.Builder;
+
+public sealed class TextureBuilder : BaseBuilder
+{
+	private const int AtlasWidth = 2000, AtlasHeight = 2000, TextureGap = 1;
+	private const string AtlasName = "atlas" + AssetBuilder.AssetExtension;
+
+	protected override bool IsValid(FileData file)
+	{
+		switch (Path.GetExtension(file.FullPath).ToLower())
+		{
+			case ".bmp": case ".jpeg": case ".jpg": case ".png": return true;
+			default: return false;
+		}
+	}
+
+	public override void Build(AssetBuilder builder)
+	{
+		string outputPath;
+		List<Texture> textures = new();
+
+		foreach (KeyValuePair<string, FileGroup> group in Groups)
+		{
+			if (!group.Value.NeedUpdate) continue;
+
+			outputPath = Path.Combine(builder.TargetDirectory, group.Key);
+
+			if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
+
+			if (group.Key.Length == 0)// Único
+			{
+				for (int i = 0; i < group.Value.Count; i++)
+				{
+					group.Value[i].OutputPath = Path.Combine(outputPath, Path.GetFileNameWithoutExtension(group.Value[i].FullPath) + AssetBuilder.AssetExtension);
+
+					BuildSingle(group.Value[i]);
+				}
+			}
+			else// Atlas
+			{
+				for (int i = 0; i < group.Value.Count; i++)
+				{
+					group.Value[i].OutputPath = Path.Combine(outputPath, AtlasName);
+
+					textures.Add(new Texture(Path.GetFileNameWithoutExtension(group.Value[i].FullPath), Image.Load(group.Value[i].FullPath)));
+				}
+
+				textures.OrderByDescending((texture) => texture.image.Height);
+				BuildMultiple(textures, Path.Combine(outputPath, AtlasName));
+				textures.Clear();
+			}
+		}
+	}
+	private void BuildSingle(FileData file)
+	{
+		Console.WriteLine("${0} > ${1}...", file.FullPath, file.OutputPath);
+
+		StreamWriter stream = new(file.OutputPath);
+		BinaryWriter writer = new(stream.BaseStream);
+		Image<Rgba32> image = Image.Load<Rgba32>(file.FullPath);
+
+		writer.Write("texture");
+		WriteImage(writer, image, image.Size);
+		stream.Close();
+	}
+	private void BuildMultiple(List<Texture> textures, string output)
+	{
+		Console.WriteLine("Compilando ${0}...", output);
+
+		Image<Rgba32> atlas = new(AtlasWidth, AtlasHeight);
+		Point location = new(TextureGap);
+		Size size = new();
+		int addToY = 0;
+		StreamWriter stream = new(output);
+		BinaryWriter writer = new(stream.BaseStream);
+
+		writer.Write("atlas");
+
+		for (int i = 0; i < textures.Count; i++)
+		{
+			if (location.X + textures[i].image.Width + TextureGap > AtlasWidth)
+			{
+				location.X = TextureGap;
+				location.Y += addToY + TextureGap;
+				addToY = 0;
+			}
+
+			if (location.Y + textures[i].image.Height + TextureGap > AtlasHeight)
+			{
+				Console.WriteLine("ERRO: O Texture Atlas ultrapassou a barreira de {0}x{1}!", AtlasWidth, AtlasHeight);
+
+				return;
+			}
+
+			atlas.Mutate((x) => x.DrawImage(textures[i].image, location, 1));
+
+			textures[i].location = location;
+			addToY = Math.Max(textures[i].image.Height, addToY);
+			size.Width = Math.Max(location.X + textures[i].image.Width + TextureGap, size.Width);
+			size.Height = Math.Max(location.Y + addToY + TextureGap, size.Height);
+			location.X += textures[i].image.Width + TextureGap;
+		}
+
+		WriteImage(writer, atlas, size);
+		writer.Write(textures.Count);
+
+		for (int i = 0; i < textures.Count; i++)
+		{
+			writer.Write(textures[i].name);
+			writer.Write(textures[i].location.X);
+			writer.Write(textures[i].location.Y);
+			writer.Write(textures[i].image.Width);
+			writer.Write(textures[i].image.Height);
+		}
+
+		stream.Close();
+	}
+	private unsafe void WriteImage(BinaryWriter writer, Image<Rgba32> image, Size size)
+	{
+		writer.Write(size.Width);
+		writer.Write(size.Height);
+		image.ProcessPixelRows((pixelAccessor) =>
+		{
+			for (int y = 0; y < size.Height; y++)
+			{
+				Span<Rgba32> row = pixelAccessor.GetRowSpan(y);
+
+				for (int x = 0; x < size.Width; x++) writer.Write(row[x].PackedValue);
+			}
+		});
+	}
+
+	private class Texture
+	{
+		public string name;
+		public Image image;
+		public Point location;
+
+		public Texture(string name, Image image)
+		{
+			this.name = name;
+			this.image = image;
+		}
+	}
+}
