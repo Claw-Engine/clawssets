@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
+using SixLabors.Fonts.Unicode;
 
 namespace Clawssets.Builder;
 
@@ -48,9 +49,10 @@ public sealed class FontBuilder : BaseBuilder
 		FontCollection collection = new();
 		FontFamily family = collection.Add(config.path);
 		Font font = family.CreateFont(config.size, config.style);
-		TextOptions options = new(font);
+		TextOptions options = new(font) { Dpi = config.size };
+		DrawingOptions drawOptions = new() { GraphicsOptions = new() { Antialias = config.antialias } };
 
-		List<Claw.Graphics.Glyph> glyphs = new();
+		List<FontGlyph> glyphs = new();
 		Image<Rgba32> atlas = new(TextureBuilder.AtlasSize, TextureBuilder.AtlasSize);
 		PointF location = new(TextureBuilder.TextureGap, TextureBuilder.TextureGap);
 		SizeF size = new();
@@ -60,6 +62,7 @@ public sealed class FontBuilder : BaseBuilder
 
 		StreamWriter stream = new(file.OutputPath);
 		BinaryWriter writer = new(stream.BaseStream);
+		IReadOnlyList<Glyph> list = null;
 
 		writer.Write("font");
 
@@ -68,7 +71,7 @@ public sealed class FontBuilder : BaseBuilder
 			for (int @char = config.charRegions[i].X; @char <= config.charRegions[i].Y; @char++)
 			{
 				stringChar = ((char)@char).ToString();
-				measure = TextMeasurer.MeasureSize(stringChar, options);
+				measure = TextMeasurer.MeasureAdvance(stringChar, options);
 
 				if (measure.Width == 0) continue;
 
@@ -86,9 +89,9 @@ public sealed class FontBuilder : BaseBuilder
 					return;
 				}
 
-				atlas.Mutate((x) => x.DrawText(stringChar, font, Color.White, location));
+				atlas.Mutate((x) => x.DrawText(drawOptions, stringChar, font, Color.White, location));
 
-				glyphs.Add(new(new Claw.Rectangle(location.X, location.Y, measure.Width, measure.Height), config.useKerning ? new Dictionary<char, float>() : null));
+				if (font.TryGetGlyphs(new CodePoint(@char), out list)) glyphs.Add(new(@char, list[0], new RectangleF(location.X, location.Y, measure.Width, measure.Height), config.useKerning ? new Dictionary<int, float>() : null));
 
 				addToY = Math.Max(measure.Height, addToY);
 				size.Width = Math.Max(location.X + measure.Width + TextureBuilder.TextureGap, size.Width);
@@ -97,20 +100,41 @@ public sealed class FontBuilder : BaseBuilder
 			}
 		}
 
-		if (config.useKerning) GetKerningPairs(glyphs);
+		System.Numerics.Vector2 offset;
+
+		if (config.useKerning)
+		{
+			for (int i = 0; i < glyphs.Count; i++)
+			{
+				for (int j = 0; j < glyphs.Count; j++)
+				{
+					if (font.TryGetKerningOffset(glyphs[i].glyph, glyphs[j].glyph, config.size, out offset)) glyphs[i].kerningPair.Add(glyphs[j].@char, offset.X);
+				}
+			}
+		}
 
 		TextureBuilder.WriteImage(writer, atlas, new Size((int)size.Width, (int)size.Height));
+		writer.Write(config.spacing.X);
+		writer.Write(config.spacing.Y);
 		writer.Write(glyphs.Count);
-		
+
 		for (int i = 0; i < glyphs.Count; i++)
 		{
-			writer.Write(glyphs[i].Area.X);
-			writer.Write(glyphs[i].Area.Y);
-			writer.Write(glyphs[i].Area.Width);
-			writer.Write(glyphs[i].Area.Height);
+			writer.Write(glyphs[i].@char);
+			writer.Write((int)glyphs[i].area.X);
+			writer.Write((int)glyphs[i].area.Y);
+			writer.Write((int)glyphs[i].area.Width);
+			writer.Write((int)glyphs[i].area.Height);
 
 			if (config.useKerning)
 			{
+				writer.Write(glyphs[i].kerningPair.Count);
+
+				foreach (KeyValuePair<int, float> pair in glyphs[i].kerningPair)
+				{
+					writer.Write(pair.Key);
+					writer.Write(pair.Value);
+				}
 			}
 			else writer.Write(0);
 		}
@@ -134,7 +158,7 @@ public sealed class FontBuilder : BaseBuilder
 						case "Path":
 							reader.Read();
 
-							config.path = Path.GetFullPath(Path.Combine(file.FullPath, reader.Value));
+							config.path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file.FullPath), reader.Value));
 							break;
 						case "Size":
 							reader.Read();
@@ -152,6 +176,15 @@ public sealed class FontBuilder : BaseBuilder
 							{
 								case "true": case "1": config.useKerning = true; break;
 								default: config.useKerning = false; break;
+							}
+							break;
+						case "Antialias":
+							reader.Read();
+
+							switch (reader.Value.ToLower())
+							{
+								case "true": case "1": config.antialias = true; break;
+								default: config.antialias = false; break;
 							}
 							break;
 						case "Style":
@@ -173,14 +206,11 @@ public sealed class FontBuilder : BaseBuilder
 
 		reader.Close();
 	}
-	private void GetKerningPairs(List<Claw.Graphics.Glyph> glyphs)
-	{
-	}
 
 	private class Config
 	{
 		public int size;
-		public bool useKerning;
+		public bool useKerning, antialias;
 		public string path;
 		public FontStyle style;
 		public Point spacing;
@@ -192,9 +222,26 @@ public sealed class FontBuilder : BaseBuilder
 
 			size = 32;
 			useKerning = true;
+			antialias = true;
 			style = FontStyle.Regular;
 			spacing = Point.Empty;
 			path = string.Empty;
+		}
+	}
+
+	private class FontGlyph
+	{
+		public int @char;
+		public RectangleF area;
+		public Glyph glyph;
+		public readonly Dictionary<int, float> kerningPair;
+
+		public FontGlyph(int @char, Glyph glyph, RectangleF area, Dictionary<int, float> kerningPair)
+		{
+			this.@char = @char;
+			this.area = area;
+			this.glyph = glyph;
+			this.kerningPair = kerningPair;
 		}
 	}
 }
