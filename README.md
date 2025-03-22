@@ -1,5 +1,5 @@
 # Clawssets
-Clawssets é um compilador de recursos (assets) para a [Claw Engine](../engine), baseado no sistema de arquivos.
+Clawssets é um compilador de recursos (assets) para a [Claw Engine](../../../engine), baseado no sistema de arquivos.
 Este é um projeto pessoal e contribuições de código não são aceitas.
 
 # Como Utilizar
