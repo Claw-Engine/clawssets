@@ -6,25 +6,15 @@ public sealed class RawBuilder : BaseBuilder
 	{
 		return Path.GetExtension(file.FullPath).ToLower() == AssetBuilder.AssetExtension;
 	}
+    protected override string GetOutputPath(FileData file) => Path.GetFileName(file.FullPath);
 
-	public override void Build(AssetBuilder builder)
+	public override void Build()
 	{
-		string outputPath;
-
 		foreach (KeyValuePair<string, FileGroup> group in Groups)
 		{
 			if (!group.Value.NeedUpdate) continue;
 
-			outputPath = Path.Combine(builder.TargetDirectory, group.Key);
-
-			if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
-
-			for (int i = 0; i < group.Value.Count; i++)
-			{
-				group.Value[i].OutputPath = Path.Combine(outputPath, Path.GetFileName(group.Value[i].FullPath));
-
-				File.Copy(group.Value[i].FullPath, group.Value[i].OutputPath);
-			}
+			for (int i = 0; i < group.Value.Count; i++) File.Copy(group.Value[i].FullPath, group.Value[i].OutputPath);
 		}
 	}
 }

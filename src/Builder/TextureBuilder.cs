@@ -17,40 +17,31 @@ public sealed class TextureBuilder : BaseBuilder
 			default: return false;
 		}
 	}
-
-	public override void Build(AssetBuilder builder)
+    protected override string GetOutputPath(FileData file)
 	{
-		string outputPath;
+		if (file.SubDirectory.Length == 0) return Path.GetFileNameWithoutExtension(file.FullPath) + AssetBuilder.AssetExtension;
+
+		return AtlasName;
+	}
+
+	public override void Build()
+	{
 		List<Texture> textures = new();
 
 		foreach (KeyValuePair<string, FileGroup> group in Groups)
 		{
 			if (!group.Value.NeedUpdate) continue;
 
-			outputPath = Path.Combine(builder.TargetDirectory, group.Key);
-
-			if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
-
 			if (group.Key.Length == 0)// Único
 			{
-				for (int i = 0; i < group.Value.Count; i++)
-				{
-					group.Value[i].OutputPath = Path.Combine(outputPath, Path.GetFileNameWithoutExtension(group.Value[i].FullPath) + AssetBuilder.AssetExtension);
-
-					BuildSingle(group.Value[i]);
-				}
+				for (int i = 0; i < group.Value.Count; i++) BuildSingle(group.Value[i]);
 			}
 			else// Atlas
 			{
-				for (int i = 0; i < group.Value.Count; i++)
-				{
-					group.Value[i].OutputPath = Path.Combine(outputPath, AtlasName);
-
-					textures.Add(new Texture(Path.GetFileNameWithoutExtension(group.Value[i].FullPath), Image.Load(group.Value[i].FullPath)));
-				}
+				for (int i = 0; i < group.Value.Count; i++) textures.Add(new Texture(Path.GetFileNameWithoutExtension(group.Value[i].FullPath), Image.Load(group.Value[i].FullPath)));
 
 				textures.OrderByDescending((texture) => texture.image.Height);
-				BuildMultiple(textures, Path.Combine(outputPath, AtlasName));
+				BuildMultiple(textures, group.Value[0].OutputPath);
 				textures.Clear();
 			}
 		}

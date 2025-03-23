@@ -20,25 +20,15 @@ public sealed class FontBuilder : BaseBuilder
 			default: return false;
 		}
 	}
+    protected override string GetOutputPath(FileData file) => Path.GetFileNameWithoutExtension(file.FullPath) + AssetBuilder.AssetExtension;
 
-	public override void Build(AssetBuilder builder)
+	public override void Build()
 	{
-		string outputPath;
-
 		foreach (KeyValuePair<string, FileGroup> group in Groups)
 		{
 			if (!group.Value.NeedUpdate) continue;
 
-			outputPath = Path.Combine(builder.TargetDirectory, group.Key);
-
-			if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
-
-			for (int i = 0; i < group.Value.Count; i++)
-			{
-				group.Value[i].OutputPath = Path.Combine(outputPath, Path.GetFileNameWithoutExtension(group.Value[i].FullPath) + AssetBuilder.AssetExtension);
-
-				Build(group.Value[i]);
-			}
+			for (int i = 0; i < group.Value.Count; i++) Build(group.Value[i]);
 		}
 	}
 	private void Build(FileData file)

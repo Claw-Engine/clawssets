@@ -51,7 +51,7 @@ public class AssetBuilder
 		{
 			for (int j = 0; j < builders.Length; j++)
 			{
-				if (builders[j].TryToAdd(newFileData[i])) break;
+				if (builders[j].TryToAdd(this, newFileData[i])) break;
 			}
 		}
 	}
@@ -110,7 +110,7 @@ public class AssetBuilder
 	{
 		if (!Directory.Exists(TargetDirectory)) Directory.CreateDirectory(TargetDirectory);
 
-		for (int i = 0; i < builders.Length; i++) builders[i].Build(this);
+		for (int i = 0; i < builders.Length; i++) builders[i].Build();
 	}
 
 	public void Finish()
@@ -123,10 +123,10 @@ public class AssetBuilder
 
 			for (int i = 0; i < oldFileData.Count; i++)
 			{
+				canDelete = true;
+
 				if (oldFileData[i].OutputPath.Length > 0)
 				{
-					canDelete = true;
-
 					for (int j = 0; j < newFileData.Count; j++)
 					{
 						if (newFileData[j].OutputPath == oldFileData[i].OutputPath)
