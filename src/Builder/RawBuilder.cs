@@ -14,7 +14,11 @@ public sealed class RawBuilder : BaseBuilder
 		{
 			if (!group.Value.NeedUpdate) continue;
 
-			for (int i = 0; i < group.Value.Count; i++) File.Copy(group.Value[i].FullPath, group.Value[i].OutputPath, true);
+			for (int i = 0; i < group.Value.Count; i++)
+			{
+				Console.WriteLine("${0} > ${1}...", group.Value[i].FullPath, group.Value[i].OutputPath);
+				File.Copy(group.Value[i].FullPath, group.Value[i].OutputPath, true);
+			}
 		}
 	}
 }
