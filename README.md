@@ -8,6 +8,6 @@ Para utilizar, basta compilar o executável do projeto em modo Release e execut�
 
 ## CLI
 ```
-> /caminho/da/clawssets [-o/--output /copiar/para/1 /copiar/para/2]
+> /caminho/da/clawssets [/caminho/dos/assets] [-o/--output /copiar/para/1 /copiar/para/2]
 ```
 Para evitar a necessidade de `--output [caminhos]`, você pode criar um arquivo `outputs`, em que cada linha é um caminho (relativo à pasta).
